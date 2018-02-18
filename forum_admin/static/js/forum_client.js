@@ -1,12 +1,12 @@
 /**
- * @fileOverview Forum administration dashboard. It utilizes the Forum API to 
-                 handle user information (retrieve user list, edit user profile, 
-                 as well as add and remove new users form the system). It also 
+ * @fileOverview Forum administration dashboard. It utilizes the Forum API to
+                 handle user information (retrieve user list, edit user profile,
+                 as well as add and remove new users form the system). It also
                  permits to list and remove user's messages.
  * @author <a href="mailto:ivan.sanchez@oulu.fi">Ivan Sanchez Milara</a>
  * @author <a href="mailto:mika.oja@oulu.fi">Mika Oja</a>
  * @version 1.0
- * 
+ *
  * NOTE: The documentation utilizes jQuery syntax to refer to classes and ids in
          the HTML code: # is utilized to refer to HTML elements ids while . is
          utilized to refer to HTML elements classes.
@@ -15,48 +15,48 @@
 
 /**** START CONSTANTS****/
 
-/** 
- * Set this to true to activate the debugging messages. 
+/**
+ * Set this to true to activate the debugging messages.
  * @constant {boolean}
- * @default 
+ * @default
  */
 var DEBUG = true;
 
-/** 
- * Mason+JSON mime-type 
+/**
+ * Mason+JSON mime-type
  * @constant {string}
- * @default 
+ * @default
  */
 const MASONJSON = "application/vnd.mason+json";
 
 const PLAINJSON = "application/json";
 
-/** 
+/**
  * Link to Users_profile
  * @constant {string}
- * @default 
+ * @default
  */
 const FORUM_USER_PROFILE = "/profiles/users";
 
-/** 
+/**
  * Link to Messages_profile
  * @constant {string}
- * @default 
+ * @default
  */
 const FORUM_MESSAGE_PROFILE = "/profiles/messages";
 
-/** 
+/**
  * Default datatype to be used when processing data coming from the server.
  * Due to JQuery limitations we should use json in order to process Mason responses
  * @constant {string}
- * @default 
+ * @default
  */
 const DEFAULT_DATATYPE = "json";
 
-/** 
+/**
  * Entry point of the application
  * @constant {string}
- * @default 
+ * @default
  */
 const ENTRYPOINT = "/forum/api/users/"; //Entrypoint: Resource Users
 
@@ -69,19 +69,19 @@ const ENTRYPOINT = "/forum/api/users/"; //Entrypoint: Resource Users
       calls. We have implemented one function per link relation in both profiles.
       Since we are not interesting in the whole API functionality, some of the
       functions does not do anything. Hence, those link relations are ignored
-****/ 
+****/
 
 
 /**
  * This function is the entrypoint to the Forum API.
  *
  * Associated rel attribute: Users Mason+JSON and users-all
- * 
+ *
  * Sends an AJAX GET request to retrive the list of all the users of the application
- * 
- * ONSUCCESS=> Show users in the #user_list. 
+ *
+ * ONSUCCESS=> Show users in the #user_list.
  *             After processing the response it utilizes the method {@link #appendUserToList}
- *             to append the user to the list.  
+ *             to append the user to the list.
  *             Each user is an anchor pointing to the respective user url.
  * ONERROR => Show an alert to the user.
  *
@@ -115,7 +115,7 @@ function getUsers(apiurl) {
 
         //Prepare the new_user_form to create a new user
         var create_ctrl = data["@controls"]["forum:add-user"]
-        
+
         if (create_ctrl.schema) {
             createFormFromSchema(create_ctrl.href, create_ctrl.schema, "new_user_form");
         }
@@ -176,7 +176,7 @@ messages ***/
  *
  * @param {string} apiurl - The url of the parent message.
  * @param {object} body - An associative array with the new message
- * 
+ *
 **/
 function reply(apiurl,body){
     return; //THE CLIENT DOES NOT KNOW HOW TO ADD A NEW MESSAGE
@@ -193,9 +193,9 @@ function reply(apiurl,body){
  * ONERROR => Show an alert to the user
  *
  * @param {string} apiurl - The url of the Message
- * 
+ *
 **/
-    
+
 function delete_message(apiurl){
     //TODO 3: Send an AJAX request to remove the current message
         // Do not implement the handlers yet, just show some DEBUG text in the console.
@@ -203,7 +203,23 @@ function delete_message(apiurl){
         //are required.
     //TODO 4
        //Implemente the handlers following the instructions from the function documentation.
-    return;
+       $.ajax({
+           url: apiurl,
+           type: "DELETE",
+           dataType:DEFAULT_DATATYPE
+       }).done(function (data, textStatus, jqXHR){
+           if (DEBUG) {
+               console.log ("RECEIVED RESPONSE: data:",data,"; textStatus:",textStatus);
+           }
+           alert("The message was deleted successfully");
+           //Reload the user information, so messages are reloaded.
+           reloadUserData();
+       }).fail(function (jqXHR, textStatus, errorThrown){
+           if (DEBUG) {
+               console.log ("RECEIVED ERROR: textStatus:",textStatus, ";error:",errorThrown);
+           }
+           alert("Could not delete a message");
+       });
 }
 
 /**
@@ -212,7 +228,7 @@ function delete_message(apiurl){
  * Associated rel attribute: add-message
  *
  * @param {string} apiurl - The url of the parent Messages collection
- * 
+ *
 **/
 function add_message(apiurl,template){
     return; //THE CLIENT DOES NOT KNOW HOW TO HANDLE COLLECTION OF MESSAGES
@@ -246,9 +262,9 @@ function collection_messages(apiurl){
  * Associated rel attribute: edit (in message profile)
  *
  * @param {string} apiurl - The url of the Message
- * @param {object} message - An associative array containing the new information 
+ * @param {object} message - An associative array containing the new information
  *   of the message
- * 
+ *
 **/
 function edit_message(apiurl, template){
     return; //THE CLIENT DOES NOT KNOW HOW TO HANDLE COLLECTION OF MESSAGES
@@ -280,7 +296,7 @@ function in_reply_to(apiurl){
  * ONERROR => Show an alert to the user
  *
  * @param {string} apiurl - The url of the Message
- * 
+ *
 **/
 
 function get_message(apiurl){
@@ -310,28 +326,55 @@ function get_message(apiurl){
 /**
  * Sends an AJAX GET request to retrieve information related to user history.
  *
- * Associated rel attribute: messages-history 
+ * Associated rel attribute: messages-history
  *
  * ONSUCCESS =>
- *   a.1) Check the number of messages received (data.items) 
- *   a.2) Add the previous value to the #messageNumber input element (located in 
+ *   a.1) Check the number of messages received (data.items)
+ *   a.2) Add the previous value to the #messageNumber input element (located in
  *        #userHeader section).
- *   b.1) Iterate through all messages. 
+ *   b.1) Iterate through all messages.
  *   b.2) For each message in the history, access the message information by
  *        calling the corresponding Message instance (call {@link get_message})
  *        The url of the message is obtained from the href attribute of the
- *        message item. 
+ *        message item.
  * ONERROR =>
  *    a)Show an *alert* informing the user that the target user history could not be retrieved
  *    b)Deselect current user calling {@link #deselectUser}.
  * @param {string} apiurl - The url of the History instance.
 **/
-    //TODO 3: Send the AJAX to retrieve the history information. 
+    //TODO 3: Send the AJAX to retrieve the history information.
     //        Do not implement the handlers yet, just show some DEBUG text in the console.
-    //TODO 4: Implement the handlers for done() and fail() responses 
-    
+    //TODO 4: Implement the handlers for done() and fail() responses
+
 function messages_history(apiurl){
-    return;
+  return $.ajax({
+      url: apiurl,
+      dataType:DEFAULT_DATATYPE
+  }).done(function (data, textStatus, jqXHR){
+      if (DEBUG) {
+          console.log ("RECEIVED RESPONSE: data:",data,"; textStatus:",textStatus);
+      }
+      //Fill number of messages
+      var messages = data.items;
+      $("#messagesNumber").val(messages.length.toString());
+      //Add message
+      for (var i=0; i < messages.length; i++) {
+          var messageurl = messages[i]["@controls"]["self"].href;
+          get_message(messageurl);
+      }
+  }).fail(function (jqXHR, textStatus, errorThrown){
+      if (DEBUG) {
+          console.log ("RECEIVED ERROR: textStatus:",textStatus, ";error:",errorThrown);
+      }
+      if (jqXHR.status == 404) {
+          //There is no messages for this user
+          $("#messagesNumber").val("0");
+          return;
+      }
+      //Inform the user that could not retrieve the history because an error different to status code
+      alert ("Cannot retrieve the messages for the user");
+      deselectUser();
+  });
 }
 
 /**
@@ -346,7 +389,7 @@ function messages_history(apiurl){
  * ONERROR =>
  *     a)Show an alert informing the user that the new information was not stored in the databse
  *
- * @param {string} apiurl - The url of the intance to delete. 
+ * @param {string} apiurl - The url of the intance to delete.
 **/
 function delete_user(apiurl){
     $.ajax({
@@ -372,7 +415,7 @@ function delete_user(apiurl){
  * This client does not support handling public user information
  *
  * Associated rel attribute: public-data
- * 
+ *
  * @param {string} apiurl - The url of the Public profile instance.
 **/
 function public_data(apiurl){
@@ -383,17 +426,17 @@ function public_data(apiurl){
 /**
  * Sends an AJAX request to retrieve the restricted profile information:
  * {@link http://docs.pwpforum2017appcompleteversion.apiary.io/#reference/users/users-private-profile/get-user's-restricted-profile | User Restricted Profile}
- * 
+ *
  * Associated rel attribute: private-data
- * 
+ *
  * ONSUCCESS =>
  *  a) Extract all the links relations and its corresponding URLs (href)
  *  b) Create a form and fill it with attribute data (semantic descriptors) coming
  *     from the request body. The generated form should be embedded into #user_restricted_form.
  *     All those tasks are performed by the method {@link #fillFormWithMasonData}
- *     b.1) If "user:edit" relation exists add its href to the form action attribute. 
+ *     b.1) If "user:edit" relation exists add its href to the form action attribute.
  *          In addition make the fields editables and use template to add missing
- *          fields. 
+ *          fields.
  *  c) Add buttons to the previous generated form.
  *      c.1) If "user:delete" relation exists show the #deleteUserRestricted button
  *      c.2) If "user:edit" relation exists show the #editUserRestricted button
@@ -402,7 +445,7 @@ function public_data(apiurl){
  *   a)Show an alert informing the restricted profile could not be retrieved and
  *     that the data shown in the screen is not complete.
  *   b)Unselect current user and go to initial state by calling {@link #deselectUser}
- * 
+ *
  * @param {string} apiurl - The url of the Restricted Profile instance.
 **/
 function private_data(apiurl){
@@ -432,7 +475,7 @@ function private_data(apiurl){
                     }).done(function (schema, textStatus, jqXHR) {
                         $form = createFormFromSchema(resource_url, schema, "user_restricted_form");
                         $("#editUserRestricted").show();
-                        fillFormWithMasonData($form, data);                        
+                        fillFormWithMasonData($form, data);
                     }).fail(function (jqXHR, textStatus, errorThrown) {
                         if (DEBUG) {
                             console.log ("RECEIVED ERROR: textStatus:",textStatus, ";error:",errorThrown);
@@ -443,8 +486,8 @@ function private_data(apiurl){
                 else {
                     alert("Form schema not found");
                 }
-            }            
-            
+            }
+
         }).fail(function (jqXHR, textStatus, errorThrown){
             if (DEBUG) {
                 console.log ("RECEIVED ERROR: textStatus:",textStatus, ";error:",errorThrown);
@@ -466,14 +509,14 @@ function private_data(apiurl){
  *          * The url of the resource is in the Location header
  *          * {@link #appendUserToList} returns the li element that has been added.
  *       c) Make a click() on the added li element. To show the created user's information.
- *     
+ *
  * ONERROR =>
  *      a) Show an alert informing that the new information was not stored in the databse
- * 
- * @param {string} apiurl - The url of the User instance. 
+ *
+ * @param {string} apiurl - The url of the User instance.
  * @param {object} user - An associative array containing the new user's information
- * 
-**/   
+ *
+**/
 function add_user(apiurl,user){
     var userData = JSON.stringify(user);
     var nickname = user.nickname;
@@ -513,14 +556,14 @@ function collection_users(apiurl){
 }
 
 /**
- * Get user information. 
+ * Get user information.
  *
  * Associated rel attribute: up
  *
  * @param {string} apiurl - The url of the User instamce
 **/
 function up(apiurl){
-    return; //We do not process this information. 
+    return; //We do not process this information.
 }
 
 /**
@@ -534,11 +577,11 @@ function up(apiurl){
  *     a)Show an alert informing the user that the user information has been modified
  * ONERROR =>
  *     a)Show an alert informing the user that the new information was not stored in the databse
- * 
- * @param {string} apiurl - The url of the intance to edit. 
+ *
+ * @param {string} apiurl - The url of the intance to edit.
  * @param {object} body - An associative array containing the new data of the
  *  target user
- * 
+ *
 **/
 function edit_user(apiurl, body){
     $.ajax({
@@ -575,16 +618,16 @@ function edit_user(apiurl, body){
  *                        to the #user_form action attribute.
  *                    b.2) If user:edit: Show the #editUser button. Add the href
  *                        to the #user_form action attribute.
- *                    b.3) If user:restricted data: Call the function {@link #private_data} to 
+ *                    b.3) If user:restricted data: Call the function {@link #private_data} to
  *                        extract the information of the restricted profile
  *                    b.4) If user:messages: Call the function {@link #messages_history} to extract
  *                        the messages history of the current user.  *
  *
  * ONERROR =>   a) Alert the user
- *              b) Unselect the user from the list and go back to initial state 
+ *              b) Unselect the user from the list and go back to initial state
  *                (Call {@link deleselectUser})
- * 
- * @param {string} apiurl - The url of the User instance. 
+ *
+ * @param {string} apiurl - The url of the User instance.
 **/
 function get_user(apiurl) {
     return $.ajax({
@@ -597,7 +640,7 @@ function get_user(apiurl) {
         }
         //Set right url to the user form
         $("#user_form").attr("action",apiurl);
-        //Fill basic information from the user_basic_form 
+        //Fill basic information from the user_basic_form
         $("#nickname").val(data.nickname || "??");
         delete(data.nickname);
         $("#registrationdate").val(getDate(data.registrationdate || 0));
@@ -615,12 +658,12 @@ function get_user(apiurl) {
         if ("forum:private-data" in user_links) {
            var private_profile_url = user_links["forum:private-data"].href; //Restricted profile
         }
-        if ("forum:messages-history" in user_links){            
+        if ("forum:messages-history" in user_links){
             var messages_url = user_links["forum:messages-history"].href;
-            // cut out the optional query parameters. this solution is not pretty. 
-            messages_url = messages_url.slice(0, messages_url.indexOf("{?")); 
+            // cut out the optional query parameters. this solution is not pretty.
+            messages_url = messages_url.slice(0, messages_url.indexOf("{?"));
         }
-        
+
         //Fill the user profile with restricted user profile. This method
         // Will call also to the list of messages.
         if (private_profile_url){
@@ -630,7 +673,7 @@ function get_user(apiurl) {
         if (messages_url){
             messages_history(messages_url);
         }
-       
+
 
     }).fail(function (jqXHR, textStatus, errorThrown){
         if (DEBUG) {
@@ -651,8 +694,8 @@ function get_user(apiurl) {
       UI ****/
 
 /**
- * Append a new user to the #user_list. It appends a new <li> element in the #user_list 
- * using the information received in the arguments.  
+ * Append a new user to the #user_list. It appends a new <li> element in the #user_list
+ * using the information received in the arguments.
  *
  * @param {string} url - The url of the User to be added to the list
  * @param {string} nickname - The nickname of the User to be added to the list
@@ -668,10 +711,10 @@ function appendUserToList(url, nickname) {
 /**
  * Populate a form with the <input> elements contained in the <i>schema</i> input parameter.
  * The action attribute is filled in with the <i>url</i> parameter. Values are filled
- * with the default values contained in the template. It also marks inputs with required property. 
+ * with the default values contained in the template. It also marks inputs with required property.
  *
  * @param {string} url - The url of to be added in the action attribute
- * @param {Object} schema - a JSON schema object ({@link http://json-schema.org/}) 
+ * @param {Object} schema - a JSON schema object ({@link http://json-schema.org/})
  * which is utlized to append <input> elements in the form
  * @param {string} id - The id of the form is gonna be populated
 **/
@@ -691,7 +734,7 @@ function createFormFromSchema(url,schema,id){
             else {
                 appendInputFormField($form_content, key, props[key], schema.required.includes(key));
             }
-            
+
         });
     }
     return $form;
@@ -701,7 +744,7 @@ function createFormFromSchema(url,schema,id){
  *
  * @param {jQuery} container - The form container
  * @param {string} The name of the input field
- * @param {Object} object_schema - a JSON schema object ({@link http://json-schema.org/}) 
+ * @param {Object} object_schema - a JSON schema object ({@link http://json-schema.org/})
  * which is utlized to append properties of the input
  * @param {boolean} required- If it is a mandatory field or not.
 **/
@@ -709,7 +752,7 @@ function appendInputFormField($container, name, object_schema, required) {
     var input_id = name;
     var prompt = object_schema.title;
     var desc = object_schema.description;
-    
+
 
     $input = $('<input type="text" class="form-control"></input>');
     $input.addClass("editable");
@@ -721,7 +764,7 @@ function appendInputFormField($container, name, object_schema, required) {
 
     $container.append($label_for);
     $container.append($input);
-    
+
     if(desc){
         $input.attr('placeholder', desc);
     }
@@ -729,7 +772,7 @@ function appendInputFormField($container, name, object_schema, required) {
         $input.prop('required',true);
         $label = $("label[for='"+$input.attr('id')+"']");
         $label.append("*");
-    }    
+    }
 }
 /**
  * Private class used by {@link #createFormFromSchema}. Appends a subform to append
@@ -737,7 +780,7 @@ function appendInputFormField($container, name, object_schema, required) {
  *
  * @param {jQuery} $container - The form container
  * @param {string} The name of the input field
- * @param {Object} object_schema - a JSON schema object ({@link http://json-schema.org/}) 
+ * @param {Object} object_schema - a JSON schema object ({@link http://json-schema.org/})
  * which is utlized to append properties of the input
  * @param {boolean} required- If it is a mandatory field or not.
 **/
@@ -747,7 +790,7 @@ function appendObjectFormFields($container, name, object_schema) {
     Object.keys(object_schema.properties).forEach(function(key, index) {
         if (object_schema.properties[key].type == "object") {
             // only one nested level allowed
-            // therefore do nothing            
+            // therefore do nothing
         }
         else {
             appendInputFormField($div, key, object_schema.properties[key], false);
@@ -759,10 +802,10 @@ function appendObjectFormFields($container, name, object_schema) {
 /**
  * Populate a form with the content in the param <i>data</i>.
  * Each data parameter is going to fill one <input> field. The name of each parameter
- * is the <input> name attribute while the parameter value attribute represents 
- * the <input> value. All parameters are by default assigned as 
+ * is the <input> name attribute while the parameter value attribute represents
+ * the <input> value. All parameters are by default assigned as
  * <i>readonly</i>.
- * 
+ *
  * NOTE: All buttons in the form are hidden. After executing this method adequate
  *       buttons should be shown using $(#button_name).show()
  *
@@ -771,15 +814,15 @@ function appendObjectFormFields($container, name, object_schema) {
 **/
 
 function fillFormWithMasonData($form, data) {
-    
+
     console.log(data);
-    
+
     $(".form_content", $form).children("input").each(function() {
         if (data[this.id]) {
             $(this).attr("value", data[this.id]);
         }
     });
-    
+
     $(".form_content", $form).children(".subform").children("input").each(function() {
         var parent = $(this).parent()[0];
         if (data[parent.id][this.id]) {
@@ -791,10 +834,10 @@ function fillFormWithMasonData($form, data) {
 /**
  * Serialize the input values from a given form (jQuery instance) into a
  * JSON document.
- * 
+ *
  * @param {Object} $form - a jQuery instance of the form to be serailized
  * @returs {Object} An associative array in which each form <input> is converted
- * into an element in the dictionary. 
+ * into an element in the dictionary.
 **/
 function serializeFormTemplate($form){
     var envelope={};
@@ -803,16 +846,16 @@ function serializeFormTemplate($form){
     $inputs.each(function() {
         envelope[this.id] = $(this).val();
     });
-    
+
     var subforms = $form.find(".form_content .subform");
     subforms.each(function() {
-        
+
         var data = {}
-        
+
         $(this).children("input").each(function() {
             data[this.id] = $(this).val();
         });
-        
+
         envelope[this.id] = data
     });
     return envelope;
@@ -831,16 +874,16 @@ function serializeFormTemplate($form){
  *  //             <div class="form_content">
  *  //                <input type=text class="headline">
  *  //                <input type="textarea" class="articlebody">
- *  //             </div>  
+ *  //             </div>
  *  //        </form>
  *  //</div>
  *
  * @param {string} url - The url of the created message
  * @param {string} headline - The title of the new message
- * @param {string} articlebody - The body of the crated message. 
+ * @param {string} articlebody - The body of the crated message.
 **/
 function appendMessageToList(url, headline, articlebody) {
-        
+
     var $message = $("<div>").addClass('message').html(""+
                         "<form action='" + url + "' class='container'>"+
                         "   <div class='row'>"+
@@ -865,7 +908,7 @@ function appendMessageToList(url, headline, articlebody) {
  *
 **/
 function prepareUserDataVisualization() {
-    
+
     //Remove all children from form_content
     $("#userProfile .form_content").empty();
     //Hide buttons
@@ -884,7 +927,7 @@ function prepareUserDataVisualization() {
 
 /**
  * Helper method to visualize the form to create a new user (#new_user_form)
- * It hides current user information and purge old data still in the form. It 
+ * It hides current user information and purge old data still in the form. It
  * also shows the #createUser button.
 **/
 function showNewUserForm () {
@@ -897,7 +940,7 @@ function showNewUserForm () {
     form.reset();
     // Show butons
     $("input[type='button']",form).show();
-    
+
     $("#newUser").show();
     //Be sure that #mainContent is visible.
     $("#mainContent").show();
@@ -923,9 +966,9 @@ function reloadUserData() {
 
 /**
  * Transform a date given in a UNIX timestamp into a more user friendly string
- * 
+ *
  * @param {number} timestamp - UNIX timestamp
- * @returns {string} A string representation of the UNIX timestamp with the 
+ * @returns {string} A string representation of the UNIX timestamp with the
  * format: 'dd.mm.yyyy at hh:mm:ss'
 **/
 function getDate(timestamp){
@@ -949,11 +992,11 @@ function getDate(timestamp){
     return day+"."+month+"."+year+ " at "+ hours + ':' + minutes + ':' + seconds;
 }
 
-/** 
+/**
  * Transforms an address with the format 'city, country' into a dictionary.
  * @param {string} input - The address to be converted into a dictionary with the
  * format 'city, country'
- * @returns {Object} a dictionary with the following format: 
+ * @returns {Object} a dictionary with the following format:
  * {'object':{'addressLocality':locality, 'addressCountry':country}}
 **/
 function getAddress(address){
@@ -982,7 +1025,7 @@ function handleShowUserForm(event){
 /**
  * Uses the API to delete the currently active user.
  *
- * TRIGGER: #deleteUserRestricted 
+ * TRIGGER: #deleteUserRestricted
 **/
 function handleDeleteUser(event){
     //Extract the url of the resource from the form action attribute.
@@ -998,7 +1041,7 @@ function handleDeleteUser(event){
 /**
  * Uses the API to update the user's restricted profile with the form attributes in the present form.
  *
- * TRIGGER: #editRestrictedUser 
+ * TRIGGER: #editRestrictedUser
 **/
 function handleEditUserRestricted(event){
     //Extract the url of the resource from the form action attribute.
@@ -1015,7 +1058,7 @@ function handleEditUserRestricted(event){
 /**
  * Uses the API to create a new user with the form attributes in the present form.
  *
- * TRIGGER: #createUser 
+ * TRIGGER: #createUser
 **/
 function handleCreateUser(event){
     if (DEBUG) {
@@ -1028,11 +1071,11 @@ function handleCreateUser(event){
     return false; //Avoid executing the default submit
 }
 /**
- * Uses the API to retrieve user's information from the clicked user. In addition, 
+ * Uses the API to retrieve user's information from the clicked user. In addition,
  * this function modifies the active user in the #user_list (removes the .active
  * class from the old user and add it to the current user)
  *
- * TRIGGER: click on #user_list li a 
+ * TRIGGER: click on #user_list li a
 **/
 function handleGetUser(event) {
     if (DEBUG) {
@@ -1051,12 +1094,21 @@ function handleGetUser(event) {
     // #user_list li element is $(this).parent()
     //
     // Purge the forms by calling the function prepareUserDataVisualization()
-    // 
+    //
     // Finally extract the href attribute from the current anchor ($(this))
-    // and call the function get_user(url) to make the corresponding 
+    // and call the function get_user(url) to make the corresponding
     // HTTP call to the RESTful API. You can extract an HTML attribute using the
     // attr("attribute_name") method from JQuery.
-    
+    event.preventDefault();
+   $("#user_list .selected").removeClass("selected");
+   $(this).parent().addClass("selected");
+   //Clean the forms.
+   //Purge and show the existingUserData div.
+   prepareUserDataVisualization();
+   var url = $(this).attr("href");
+   get_user(url);
+   return false; //IMPORTANT TO AVOID <A> BUBLING
+
     return;
 }
 
@@ -1075,7 +1127,9 @@ function handleDeleteMessage(event){
     //  Call the method delete_message(messageurl).
     //  Check handleDeleteUser for more hints.
     //  Remember to return false in order to avoid default action
-    return;
+    var url = $(this).closest("form").attr("action");
+    delete_message(url);
+    return false;
 }
 
 /**** END BUTTON HANDLERS ****/
@@ -1092,11 +1146,16 @@ $(function(){
     // #createUser -> handleCreateUser
     //
     // Check http://api.jquery.com/on/ for more help.
+    $("#addUserButton").on("click",handleShowUserForm());
+    $("#deleteUser").on("click",handleDeleteUser());
+    $("#editUserRestricted").on("click",handleEditUserRestricted());
+    $("#createUser").on("click",handleCreateUser());
+    $("#editUser").on("click", handleEditUser());
+    $("#deleteUserRestricted").on("click", handleDeleteUserRestricted());
 
 
 
 
-    
     //TODO 1: Add corresponding click handlers for .deleteMessage button and
     // #user_list li a anchors. Since these elements are generated dynamically
     // (they are not in the initial HTML code), you must use delegated events.
@@ -1106,10 +1165,11 @@ $(function(){
     // .deleteMessage => handleDeleteMessage
     // #user_list li a => handleGetUser
     // More information for direct and delegated events from http://api.jquery.com/on/
-   
+    $("#user_list").on("click","li a",handleGetUser());
+    $("#messages_list").on("click",".deleteMessage",handleDeleteMessage());
 
 
-   
+
     //Retrieve list of users from the server
     getUsers(ENTRYPOINT);
 });
